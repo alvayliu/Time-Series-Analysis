@@ -1,0 +1,99 @@
+#---
+#title: "Fitting Data to a Seasonal ARIMA Process Step by Step in R"
+#author: Alva Liu
+#date: 2018-04-30
+#output: html_notebook
+#---
+  
+
+library(itsmr)
+library(forecast)
+
+
+## --- Data Exploration ---
+#The time series chosen for this tutorial is the Global Temperatures by Month data 
+#and can be downloaded from [Kaggle](https://www.kaggle.com/berkeleyearth/climate-change-earth-surface-temperature-data/data). 
+#Only the last 432 observations of the dataset, ranging from January 1980 to December 2015 sampled monthly, 
+#were used in this step by step model fit. 
+
+#The data is read from the csv file, and transformed into a time series object with 
+#frequency 12 (monthly data) in the follwoing code section. The tsclean function from 
+#the forecast library was used for finding and replacing outliers and missing values. 
+#The cleaned data is shown in the plot below. 
+
+data <- read.csv("GlobalTemperatures.csv")
+ts <- ts(data$LandAverageTemperature, start=c(1980,1), end=c(2015, 12), frequency=12)
+ts <- tsclean(ts)
+plot(ts, main="Global Land Average Temperatures", xlab= "Date", ylab="Celsius")
+
+
+#From just looking at the time series, it is possible to see that it has a seasonal 
+#component. The data does not have any apparent trend. The stl function from the stats
+#library was used to decompose the time series into a trend component, a seasonal component 
+#and residuals to confirm our assumptions about trend and seasonality. The plots below 
+#shows that the time series indeed has a strong seasonal pattern but no clear trend. 
+
+decomp <- stl(ts, s.window = "periodic")
+plot(decomp)
+
+#Since the data is seasonal, it is not stationary. This can be confirmed by using 
+#the test function in the itsmr library that conducts several tests with the null 
+#hypothesis being that the time series is i.i.d. noise. The results from the 
+#*Ljung-Box*, *McLeod-Li* and *Turning Points* tests all reject the null hypothesis 
+#with p-values below 0.05. The *ACF* and *PACF* also indicate that the data is not 
+#stationary but have a clear seasonal pattern. Also, the *QQ-plot* is not entirely 
+#diagonal.   
+
+test(ts)
+
+
+## --- Fitting Data to a Model ---
+#Due to the clear seasonal pattern, the data can be fitted to a *seasonal ARIMA* 
+#process of the form $$ARIMA(p,d,q)(P,D,Q)_s$$ where s is the period, p the AR-order,
+#d the non-seasonal differece order, q the MA-order, P the SAR-order, D the seasonal 
+#differece order and Q the SMA-order. The following steps motivate how the orders of 
+#the seasonal ARIMA model can be found. 
+
+### Step 1:
+#Since the data exhibits a strong pattern of seasonality, it makes sense to add a 
+#seasonal difference to the model, giving $$ARIMA(0,0,0)(0,1,0)_{12}$$ 
+#The residuals, ACF, PACF, AIC and RMSE of the model are shown below. 
+
+model <- Arima(ts, order=c(0,0,0), seasonal = list(order=c(0,1,0), period=12))
+tsdisplay(model$residuals, main = "ARIMA(0,0,0)(0,1,0)[12]", lag.max = 40)
+AIC(model)
+accuracy(model)
+
+### Step 2:
+#From the previous step, we can see in the ACF that there is a clear spike at lag 12.
+#The PACF has clear repeating spikes at multiples of the season (12, 24, 36, ...) that 
+#are exponentially decreasing. This is the signature of the seasonal MA process, 
+#and we therefore add a SMA component to the model. $$ARIMA(0,0,0)(0,1,1)_{12}$$ 
+  
+model <- Arima(ts, order=c(0,0,0), seasonal = list(order=c(0,1,1), period=12))
+tsdisplay(model$residuals, main = "ARIMA(0,0,0)(0,1,1)[12]", lag.max = 40)
+AIC(model)
+accuracy(model)
+
+### Step 3:
+#The ACF above is now looking like an AR(2) process. It is therefore reasonable to 
+#add two AR-components to the model, giving: $$ARIMA(2,0,0)(0,1,1)_{12}$$ 
+
+model <- Arima(ts, order=c(2,0,0), seasonal = list(order=c(0,1,1), period=12))
+tsdisplay(model$residuals, main = "ARIMA(2,0,0)(0,1,1)[12]", lag.max = 40)
+AIC(model)
+accuracy(model)
+
+#The ACF and PACF are now within the bounds of $\pm 1.96 / \sqrt n$ for almost all 
+#lags up to lag 40. This model can therefore be considered as a sufficiently 
+#reasonable fit to the data. The test function in the itsmr library can be applied 
+#again to test for randomness of the residuals.
+
+test(model$residuals)
+
+
+#Since all of the p-values are greater than 0.05, there is no reason to reject the 
+#null hypothesis, and we can conclude that we have found a seasonal ARIMA process 
+#that fits the data. 
+
+
