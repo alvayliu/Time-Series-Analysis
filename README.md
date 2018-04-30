@@ -9,7 +9,7 @@ A step by step tutorial that shows how global average temperature data sampled m
 can be fitted to a seasonal ARIMA process. The tutorial is written in R Notebook and can be opened in any web browser.  
 
 **Files:**  
-SARIMA_GlobalTemp.nb.html 
+SARIMA_GlobalTemp.nb.html  
 SARIMA_GlobalTemp.Rmd  
 SARIMA_GlobalTemp.R  
 
