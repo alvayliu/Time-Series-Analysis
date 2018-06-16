@@ -1,0 +1,99 @@
+---
+title: "Model Fitting and Forecasting"
+subtitle: "Mini-project in SF2943 Time Series Analysis"
+author: "Amit Alam, Ghassan Alrheis, Mark Guban, Alva Liu, Henrik Söderheilm"
+output: html_notebook
+---
+
+```{r}
+library(itsmr, quietly = TRUE)
+library(forecast, quietly = TRUE)
+library(tseries, quietly = TRUE)
+library(TSPred)
+```
+
+
+## Data Exploration
+
+The time series chosen for this project is the US Candy Production by Month data and can be downloaded from [Kaggle](https://www.kaggle.com/rtatman/us-candy-production-by-month). It contains in total 548 data points ranging from January 1972 to August 2017 and the values are the percents to 2012. After experimenting with the data, we decided to restrict the number of datapoints used for model fitting to the 252 datapoints ranging from January 1972 to December 1996 as no suitable model could be found for the complete dataset.
+
+```{r}
+data <- read.csv("candy_production.csv")[[2]]
+ts <- tsclean(ts(data, c(1972,1),c(2017,8), frequency=12))
+ts <- window(ts, c(1976,1),c(1996,12), frequency=12)
+plot(ts, main="US Candy Production", xlab= "", ylab="Percent of 2012 production")
+```
+
+It is possible to see from the plotted data that it is not stationary, it has a clear seasonal pattern as well as an increasing linear trend. The ACF and PACF indicate that the time series is seasonal as well. 
+
+```{r}
+acf(ts, lag.max = 40, main="", xlab = "Lag in years")
+pacf(ts, lag.max = 40, main="", xlab = "Lag in years")
+```
+
+We use apply the seasonal unit root test function, nsdiffs, that tests for the seasonal strength in the data. The test verifies that the data indeed requires a seasonal difference in order to become seasonally stationary. The function ndiff also confirms that the data is not stationary.
+
+```{r}
+nsdiffs(ts)
+ndiffs(ts, test = "")
+```
+
+## Removing Trend and Seasonal Components From Data
+
+After removing a seasonal component of period 12 and a linear trend from the data, we can observe in the figure below that the data is now centered around zero, but the residuals are clearly still dependent.
+
+```{r}
+clean <- ts - season(ts, 12) - trend(ts-season(ts, 12), 1) 
+tsdisplay(clean, main = "TS after removal of linear trend and season with period 12", lag.max = 40)
+```
+
+We check for stationarity again with nsdiffs and ndiffs, which both return zeros, indicating that the data is now a stationary time series.
+
+```{r}
+nsdiffs(clean)
+ndiffs(clean)
+```
+
+## Model Fitting
+
+The last 12 data points are removed from the data in order to be used for verifying the accuracy of the predictions.
+
+```{r}
+model_data <- window(clean, c(1976,1), c(1995,12))
+holdout <- window(clean, c(1996,1), c(1996,12))
+```
+
+Since the residuals are clearly still dependent, we need to find a stationary process that can model it. From the ACF and PACF of the data with removed the trend and seasonal components, we can see that an AR(13)-process with some coefficients set to zero might be a good fit since the ACF looks like an AR-process and the PACF has significant spikes up to lag 13. We use the Arima function from the forecast package to fit the data to an AR(13)-process and inspect the coefficients in order to determine if some of the coefficients can be fixed to zero for further optimization. 
+
+```{r}
+Arima(model_data, order = c(13,0,0))
+```
+
+The coefficients that are less than one standard error from zero are then fixed to 0 in the AR(13)-process, which decreases the AICc from 1241.47 to 1231.51. 
+
+```{r}
+fit <- Arima(model_data, order = c(13,0,0), fixed = c(NA, 0, NA, 0, NA, 0, 0, 0, NA, NA, NA, NA, NA, 0), transform.pars = FALSE)
+fit
+```
+
+We carry out the following tests for randomness of the model residuals in order to confirm that the AR(13)-process is a good fit for the data.
+
+```{r}
+test(fit$residuals)
+```
+
+The results from the Ljung-Box, McLeod-Li, Turning points and Rank tests all gives p-values above 0.05, which gives us no reason to reject the null hypothesis that the residuals are iid noise. Furthermore, the ACF and PACF are all within bounds up to lag 40 which suggest that the model is a good fit. The QQ plot shows that the model residuals are approximatedly normally distributed. 
+
+## Forecasting
+
+Forecasts of 12 data points are plotted in blue in the figure below with a 95 % confidence level. The true values are plotted in black. We can see that the forecasted values follow the fluctuation patterns of the real data but with smaller amplitudes.   
+
+```{r}
+f <- forecast(fit, level=95, h=12)
+plot(f, main="Forecasts for Jan-Dec 1996")
+lines(holdout)
+MSE(f$mean, holdout)
+```
+
+
+

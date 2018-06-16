@@ -16,6 +16,17 @@ SARIMA_GlobalTemp.Rmd
 Time Series, ARIMA, Seasonal ARIMA, R    
 
 
+## Step-by-step Model Fitting and Forecasting in R 
 
+**Description:**  
+A step by step tutorial that shows how US candy production data sampled monthly between January 1972 to December 1996
+can be fitted to a time series model with forecasts. The tutorial is written in R Notebook and can be opened in any web browser.  
+
+**Files:**  
+candyproduction.nb.html  
+candyproduction.Rmd  
+
+**Keywords:**   
+Time Series, AR-process, Restricting Parameters, R    
 
 
