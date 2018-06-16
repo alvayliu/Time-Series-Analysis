@@ -11,7 +11,6 @@ can be fitted to a seasonal ARIMA process. The tutorial is written in R Notebook
 **Files:**  
 SARIMA_GlobalTemp.nb.html  
 SARIMA_GlobalTemp.Rmd  
-SARIMA_GlobalTemp.R  
 
 **Keywords:**   
 Time Series, ARIMA, Seasonal ARIMA, R    

@@ -8,6 +8,7 @@ output: html_notebook
 ```{r}
 library(itsmr)
 library(forecast)
+library(tseries)
 ```
 
 
@@ -31,10 +32,10 @@ decomp <- stl(ts, s.window = "periodic")
 plot(decomp)
 ```
 
-Since the data is seasonal, it is not stationary. This can be confirmed by using the test function in the itsmr library that conducts several tests with the null hypothesis being that the time series is i.i.d. noise. The results from the *Ljung-Box*, *McLeod-Li* and *Turning Points* tests all reject the null hypothesis with p-values below 0.05. The *ACF* and *PACF* also indicate that the data is not stationary but have a clear seasonal pattern. Also, the *QQ-plot* is not entirely diagonal.   
+Since the data is seasonal, it is not stationary. We can confirm this by running the nsdiffs function from the forecast library that checks for the number of differences required for a seasonally stationary series, and the output shows that the time series need one seasonal difference to become stationary. 
 
 ```{r}
-test(ts)
+nsdiffs(ts)
 ```
 
 
@@ -82,12 +83,12 @@ AIC(model)
 accuracy(model)
 ```
 
-The ACF and PACF are now within the bounds of $\pm 1.96 / \sqrt n$ for almost all lags up to lag 40. This model can therefore be considered as a sufficiently reasonable fit to the data. The test function in the itsmr library can be applied again to test for randomness of the residuals.
+The ACF and PACF are now within the bounds of $\pm 1.96 / \sqrt n$ for almost all lags up to lag 40. This model can therefore be considered as a sufficiently reasonable fit to the data. The test function in the itsmr library can be applied to test for randomness of the residuals. It conducts several tests with the null hypothesis being that the time series is i.i.d. noise. The results from the *Ljung-Box*, *McLeod-Li* and *Turning Points* tests shows that we have no reason to reject the null hypothesis that the residuals are i.i.d. noise at this level with all the p-values above 0.05. The *ACF* and *PACF* also indicate that the data is white noise and the *QQ-plot* is approximatedly diagonal. We can thus conclude that we have found a seasonal ARIMA process that fits the data. 
 
 ```{r}
 test(model$residuals)
 ```
 
-Since all of the p-values are greater than 0.05, there is no reason to reject the null hypothesis, and we can conclude that we have found a seasonal ARIMA process that fits the data. 
+
 
 
