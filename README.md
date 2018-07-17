@@ -1,5 +1,5 @@
 # Time-Series-Analysis
-This repository contains several smaller projects and tutorials that I've created for fun about different types of time series analysis in R or Python. 
+This repository contains several smaller projects and tutorials that I've created for fun about time series analysis in R. 
 The projects are listed below.
 
 ## Fitting Data to an Seasonal ARIMA Process in R
